@@ -8,7 +8,7 @@
 
 This repository stores a computer vision workflow focused on image processing of remote sensing imagery from the Elwha river. The first portion relates to realigning offset image datasets, and the second portion involves fine-tuning Meta's SAM for bird's eye view river pixel segmentation.
 
-<img src="book/img/thumbnail.png">
+<img src="book/img/thumbnail_2.png">
 
 ## Dataset Realignment
 
