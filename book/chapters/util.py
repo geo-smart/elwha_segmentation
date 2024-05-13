@@ -1,5 +1,5 @@
 import numpy as np
-import os.path
+import os
 import cv2
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -340,8 +340,11 @@ class TLDataset(VisionDataset):
     self.names_list = []
     self.image_list = []
     
+    masks_suffix = masks_glob.replace("*", "")
     for mask in self.mask_list:
-      identifier = str(mask).replace(str(masks_path), "").replace("_corrected", "")[1:]
+      filename, extension = os.path.splitext(str(mask))
+      identifier = str(mask).replace(str(masks_path), "").replace(masks_suffix, extension)[1:]
+      
       self.names_list.append(identifier)
       self.image_list.append(images_path / identifier)
 
