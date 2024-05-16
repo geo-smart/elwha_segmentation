@@ -91,11 +91,11 @@ def writeSetToFile(file_path: str, target_set: set):
     for element in target_set:
       file.write(str(element) + "\n")
 
-def readSetFromFile(file_path: str):
+def readSetFromFile(file_path: str, data_type = int):
   loaded_set = set()
   with open(file_path, "r") as file:
     for line in file:
-      element = int(line.strip())
+      element = data_type(line.strip())
       loaded_set.add(element)
   return loaded_set
 
@@ -320,9 +320,9 @@ class TLDataset(VisionDataset):
       masks_folder: str,
       masks_glob: str,
 
-      seed: int = None, # type: ignore
-      subset: str = None, # type: ignore
-      fraction: float = None, # type: ignore
+      seed: int = None,
+      subset: str = None,
+      fraction: float = None,
     ) -> None:
     super().__init__(root, None)
 
@@ -380,11 +380,12 @@ class TLDataset(VisionDataset):
     image_path: Path = self.image_names[index]
     mask_path: Path = self.mask_names[index]
 
-    image = cv2.imread(str(image_path))
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    mask = cv2.imread(str(mask_path))[:,:,0]
-    # display_mask = cv2.bitwise_not(mask).astype(np.int32)
+    try:
+      image = cv2.imread(str(image_path))
+      image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+      mask = cv2.imread(str(mask_path))[:,:,0]
+    except:
+      print(f"Failed to read image '{self.names[index]}'")
     
     sample = { "name": self.names[index], "image": image, "mask": mask }
     return sample
