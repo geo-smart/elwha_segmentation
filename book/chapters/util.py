@@ -307,27 +307,23 @@ class UnsupervisedDataset(VisionDataset):
     }
     return sample
 
-class TLDataset(VisionDataset):
+class ImageDataset():
   """
-  A PyTorch dataset for image segmentation task, intended for supervised learning tasks 
-  where ground truth data needs to be supplied. The dataset is also compatible with 
-  torchvision transforms. The transforms passed would be applied to both images and masks.
+  A utility class for managing a large set of images for a segmentation task, intended for 
+  supervised learning tasks where ground truth data needs to be supplied.
   """
   def __init__(
       self,
-      root: str,
       images_folder: str,
       masks_folder: str,
       masks_glob: str,
-
-      seed: int = None,
+      include_masks: list = [],
+      exclude_masks: list = [],
       subset: str = None,
       fraction: float = None,
-    ) -> None:
-    super().__init__(root, None)
-
-    images_path = Path(self.root) / images_folder
-    masks_path = Path(self.root) / masks_folder
+    ):
+    images_path = Path(images_folder)
+    masks_path = Path(masks_folder)
 
     if not images_path.exists():
       raise OSError(f"{images_path} does not exist.")
@@ -337,39 +333,48 @@ class TLDataset(VisionDataset):
       raise ValueError(f"{subset} is not a valid input. Acceptable values are Train and Test.")
     
     self.mask_list = getPaths(masks_path, masks_glob)
+    masks_suffix = masks_glob.replace("*", "").replace(".png", "")
+    identifier = lambda path: path.stem.replace(masks_suffix, "")
+
+    if include_masks is not None:
+      original_amnt = len(self.mask_list)
+      self.mask_list = [mask for mask in self.mask_list if identifier(mask) in include_masks]
+      print(f"Pruned {original_amnt - len(self.mask_list)} masks based on set of {len(exclude_masks)} included masks.")
+    
+    if exclude_masks is not None: 
+      original_amnt = len(self.mask_list)
+      self.mask_list = [mask for mask in self.mask_list if identifier(mask) not in exclude_masks]
+      print(f"Pruned {original_amnt - len(self.mask_list)} masks from set of {len(exclude_masks)} excluded masks.")
+    
     self.names_list = []
     self.image_list = []
     
-    masks_suffix = masks_glob.replace("*", "")
     for mask in self.mask_list:
-      filename, extension = os.path.splitext(str(mask))
-      identifier = str(mask).replace(str(masks_path), "").replace(masks_suffix, extension)[1:]
-      
-      self.names_list.append(identifier)
-      self.image_list.append(images_path / identifier)
+      name = identifier(mask)
+      self.names_list.append(name)
+
+      image = images_path / (name + mask.suffix)
+      self.image_list.append(image)
+
+      if not image.exists():
+        raise OSError(f"Image '{image}' does not exist!")
 
     self.names_list = np.array(self.names_list)
     self.image_list = np.array(self.image_list)
+    self.mask_list = np.array(self.mask_list)
     assert len(self.image_list) == len(self.mask_list) == len(self.names_list)
 
-    if seed:
-      np.random.seed(seed)
-      indices = np.arange(len(self.mask_list))
-      np.random.shuffle(indices)
-
-      self.names_list = self.names_list[indices]
-      self.image_list = self.image_list[indices]
-      self.mask_list = self.mask_list[indices]
-
     self.fraction = fraction
+    cutoff = int(np.ceil(len(self.mask_list) * (1 - self.fraction)))
+
     if subset == "Train":
-      self.names = self.names_list[:int(np.ceil(len(self.names_list) * (1 - self.fraction)))]
-      self.image_names = self.image_list[:int(np.ceil(len(self.image_list) * (1 - self.fraction)))]
-      self.mask_names = self.mask_list[:int(np.ceil(len(self.mask_list) * (1 - self.fraction)))]
+      self.names = self.names_list[:cutoff]
+      self.image_names = self.image_list[:cutoff]
+      self.mask_names = self.mask_list[:cutoff]
     else:
-      self.names = self.names_list[int(np.ceil(len(self.names_list) * (1 - self.fraction))):]
-      self.image_names = self.image_list[int(np.ceil(len(self.image_list) * (1 - self.fraction))):]
-      self.mask_names = self.mask_list[int(np.ceil(len(self.mask_list) * (1 - self.fraction))):]
+      self.names = self.names_list[cutoff:]
+      self.image_names = self.image_list[cutoff:]
+      self.mask_names = self.mask_list[cutoff:]
       
     print(f"Subset of {len(self.mask_names)} ground truth segmentation masks marked for {subset}.")
 
