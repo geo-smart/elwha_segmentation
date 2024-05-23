@@ -317,8 +317,8 @@ class ImageDataset():
       images_folder: str,
       masks_folder: str,
       masks_glob: str,
-      include_masks: list = [],
-      exclude_masks: list = [],
+      include_masks: list = None,
+      exclude_masks: list = None,
       subset: str = None,
       fraction: float = None,
     ):
